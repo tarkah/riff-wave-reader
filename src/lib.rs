@@ -2,8 +2,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use std::io::Read;
 use std::io::Seek;
-use std::mem;
-use std::{io::SeekFrom, marker::PhantomData};
+use std::io::SeekFrom;
 
 mod error;
 pub use error::Error;
@@ -112,7 +111,7 @@ impl<T: Read + Seek> ReadExt for T {
         let sample_rate = self.read_u32()?;
         let byte_rate = self.read_u32()?;
         let block_align = self.read_u16()?;
-        let bits_per_sample = self.read_u16()?;
+        let bits_per_raw_sample = self.read_u16()?;
 
         let (extra_info_size, extended_info) = if self.read_is_fourcc()? {
             (0, None)
@@ -129,7 +128,7 @@ impl<T: Read + Seek> ReadExt for T {
             sample_rate,
             byte_rate,
             block_align,
-            bits_per_sample,
+            bits_per_raw_sample,
             extra_info_size,
             extended_info,
         })
@@ -144,7 +143,7 @@ impl<T: Read + Seek> ReadExt for T {
             return Err(Error::InvalidExtendedInfo);
         }
 
-        let sample_info = self.read_u16()?;
+        let bits_per_coded_sample = self.read_u16()?;
         let channel_mask = self.read_u32()?;
         let sub_format = self.read_u128()?;
 
@@ -153,7 +152,7 @@ impl<T: Read + Seek> ReadExt for T {
         self.read_exact(&mut remaining_data[..])?;
 
         Ok(Some(ExtendedInfo {
-            sample_info,
+            bits_per_coded_sample,
             channel_mask,
             sub_format,
             remaining_data,
@@ -278,14 +277,14 @@ pub struct FmtChunk {
     pub sample_rate: u32,
     pub byte_rate: u32,
     pub block_align: u16,
-    pub bits_per_sample: u16,
+    pub bits_per_raw_sample: u16,
     pub extra_info_size: u16,
     pub extended_info: Option<ExtendedInfo>,
 }
 
 #[derive(Debug)]
 pub struct ExtendedInfo {
-    pub sample_info: u16,
+    pub bits_per_coded_sample: u16,
     pub channel_mask: u32,
     pub sub_format: u128,
     pub remaining_data: Vec<u8>,
@@ -372,20 +371,20 @@ impl<T: Read + Seek> std::fmt::Display for RiffWaveReader<T> {
         let sample_rate = self.fmt_chunk.sample_rate;
         let byte_rate = self.fmt_chunk.byte_rate;
         let block_align = self.fmt_chunk.block_align;
-        let bits_per_sample = self.fmt_chunk.bits_per_sample;
+        let bits_per_sample = self.fmt_chunk.bits_per_raw_sample;
         let extra_info_size = self.fmt_chunk.extra_info_size;
 
         let extended = if let Some(extended) = &self.fmt_chunk.extended_info {
             format!(
                 "\n----- Extended -----
-Sample Info:     {}
+Bits per Coded:  {}
 Channel Mask:    {:#018b}
 Sub Format:      {:x}
-Remaining Data:  {:?}",
-                extended.sample_info,
+Remaining Data:  {:x?}",
+                extended.bits_per_coded_sample,
                 extended.channel_mask,
                 extended.sub_format,
-                &extended.remaining_data[..],
+                extended.remaining_data,
             )
         } else {
             String::from("")
@@ -396,10 +395,8 @@ Remaining Data:  {:?}",
                 "\n------- Fact -------
 Fact Length:     {}
 Sample Length:   {}
-Remaining Data:  {:?}",
-                fact.data_size,
-                fact.sample_length,
-                &fact.remaining_data[..],
+Remaining Data:  {:x?}",
+                fact.data_size, fact.sample_length, fact.remaining_data,
             )
         } else {
             String::from("")
@@ -445,7 +442,7 @@ Channels:        {}
 Sample Rate:     {}
 Byte Rate:       {}
 Block Align:     {}
-Bits per Sample: {}
+Bits per Raw:    {}
 Extra Info:      {}{}{}{}{}",
             size,
             format,
