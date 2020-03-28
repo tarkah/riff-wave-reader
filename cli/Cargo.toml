@@ -1,0 +1,11 @@
+[package]
+name = "cli"
+version = "0.1.0"
+authors = ["tarkah <admin@tarkah.dev>"]
+edition = "2018"
+
+[dependencies]
+riff-wave-reader = { path = "../" }
+
+anyhow = "1.0"
+structopt = "0.3"
