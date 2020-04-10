@@ -3,6 +3,13 @@ name = "riff-wave-reader"
 version = "0.1.0"
 authors = ["tarkah <admin@tarkah.dev>"]
 edition = "2018"
+license = "MIT"
+description = "Reads riff-wave compliant files. Get header info and access to the underlying reader positioned on the data block."
+documentation = "https://docs.rs/riff-wave-reader"
+repository = "https://github.com/tarkah/riff-wave-reader"
+readme = "README.md"
+keywords = ["audio", "wav", "decoder"]
+categories = ["multimedia::audio", "multimedia::encoding"]
 
 
 

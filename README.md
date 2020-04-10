@@ -1,6 +1,7 @@
 # Riff Wave Reader
 
-Reads riff-wave compliant files
+Reads riff-wave compliant files. Get header info and access to the underlying reader
+positioned on the data block.
 
 
 ## Using RiffWaveReader
@@ -22,9 +23,14 @@ fn main() -> Result<(), Error> {
     // Print header info
     reader.print_info();
 
+    // Option 1, iterate over all data bytes
     let data = reader.data()?.collect::<Vec<u8>>();
 
-    // Do stuff with data...
+    // Option 2, get the underlying reader, positioned at the start of the
+    // data block
+    let reader = reader.into_reader();
+
+    // Do stuff with data / reader...
 
     Ok(())
 }
